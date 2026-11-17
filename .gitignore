@@ -14,6 +14,7 @@ __pycache__/
 # ---- Node ----
 node_modules/
 frontend/dist/
+*.tsbuildinfo
 
 # ---- 运行期数据 ----
 data/
