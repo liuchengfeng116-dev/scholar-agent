@@ -983,25 +983,15 @@ def compose_styled_frame(
     seg: SegmentSpec,
     clause_text: str,
     global_progress: float,
-    box: tuple[int, int, int, int] | None,
     cursor_xy: tuple[int, int],
     click_ripple: float,
-    pulse_bright: bool,
     fonts: dict[str, ImageFont.FreeTypeFont],
 ) -> bytes:
     img = bg_rgb.copy().convert("RGBA")
     overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)
 
-    # 1. 高亮聚焦框
-    if box is not None:
-        bx, by, bw, bh = box
-        bx2, by2 = min(W - 6, bx + bw), min(H - 92, by + bh)
-        color = (245, 158, 11, 235) if pulse_bright else (37, 99, 235, 210)
-        fill_c = (245, 158, 11, 22) if pulse_bright else (37, 99, 235, 16)
-        draw.rounded_rectangle((bx, by, bx2, by2), radius=12, fill=fill_c, outline=color, width=4)
-
-    # 2. 顶部章节胶囊与全局进度条
+    # 1. 顶部章节胶囊与全局进度条
     draw.rectangle((0, 0, W, 5), fill=(30, 41, 59, 200))
     prog_w = max(8, int(W * min(1.0, max(0.0, global_progress))))
     draw.rectangle((0, 0, prog_w, 5), fill=(56, 189, 248, 255))
@@ -1013,14 +1003,13 @@ def compose_styled_frame(
     draw.rounded_rectangle((px1, 10, px2, 48), radius=19, fill=(15, 23, 42, 220), outline=(56, 189, 248, 200), width=2)
     draw.text((px1 + 22, 16), pill_text, font=fonts["badge"], fill=(248, 250, 252, 255))
 
-    # 3. 鼠标光标与点击扩散波纹
+    # 2. 鼠标光标与点击瞬间轻柔扩散波纹
     cx, cy = cursor_xy
     if 0.0 < click_ripple < 1.0:
-        r_rad = int(12 + 38 * click_ripple)
-        alpha = int(220 * (1.0 - click_ripple))
-        draw.ellipse((cx - r_rad, cy - r_rad, cx + r_rad, cy + r_rad), outline=(250, 204, 21, alpha), width=4)
+        r_rad = int(10 + 26 * click_ripple)
+        alpha = int(150 * (1.0 - click_ripple))
+        draw.ellipse((cx - r_rad, cy - r_rad, cx + r_rad, cy + r_rad), outline=(56, 189, 248, alpha), width=3)
 
-    draw.ellipse((cx - 14, cy - 14, cx + 14, cy + 14), fill=(250, 204, 21, 95))
     arrow = [
         (cx, cy),
         (cx, cy + 26),
@@ -1032,7 +1021,7 @@ def compose_styled_frame(
     ]
     draw.polygon(arrow, fill=(255, 255, 255, 255), outline=(15, 23, 42, 255))
 
-    # 4. 底部半透明毛玻璃字幕栏
+    # 3. 底部半透明毛玻璃字幕栏
     if clause_text:
         sub_w = int(draw.textlength(clause_text, font=fonts["sub"]))
         pad_x = 36
@@ -1131,7 +1120,7 @@ def encode_full_video() -> None:
         mid_frame = int(seg_frames * 0.46)
         trans_frames = 8
 
-        steady_cache: dict[tuple[str, int, bool], bytes] = {}
+        steady_cache: dict[tuple[str, int], bytes] = {}
 
         for f in range(seg_frames):
             t_sec = f / FPS
@@ -1155,25 +1144,20 @@ def encode_full_video() -> None:
                     seg,
                     clause_str,
                     global_prog,
-                    seg.box_a,
                     (cx, cy),
                     click_ripple=u,
-                    pulse_bright=True,
                     fonts=fonts,
                 )
             elif f < mid_frame:
-                pulse = ((f // 10) % 2) == 0
-                cache_key = ("A", clause_idx, pulse)
+                cache_key = ("A", clause_idx)
                 if cache_key not in steady_cache:
                     steady_cache[cache_key] = compose_styled_frame(
                         img_a,
                         seg,
                         clause_str,
                         global_prog,
-                        seg.box_a,
                         seg.cursor_a,
                         click_ripple=0.0,
-                        pulse_bright=pulse,
                         fonts=fonts,
                     )
                 buf = steady_cache[cache_key]
@@ -1188,25 +1172,20 @@ def encode_full_video() -> None:
                     seg,
                     clause_str,
                     global_prog,
-                    seg.box_b,
                     (cx, cy),
                     click_ripple=u,
-                    pulse_bright=True,
                     fonts=fonts,
                 )
             else:
-                pulse = ((f // 10) % 2) == 0
-                cache_key = ("B", clause_idx, pulse)
+                cache_key = ("B", clause_idx)
                 if cache_key not in steady_cache:
                     steady_cache[cache_key] = compose_styled_frame(
                         img_b,
                         seg,
                         clause_str,
                         global_prog,
-                        seg.box_b,
                         seg.cursor_b,
                         click_ripple=0.0,
-                        pulse_bright=pulse,
                         fonts=fonts,
                     )
                 buf = steady_cache[cache_key]
