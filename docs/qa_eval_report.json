@@ -1,70 +1,155 @@
 {
-  "total": 7,
-  "passed": 7,
+  "total": 11,
+  "passed": 11,
   "accuracy": 1.0,
   "cases": [
     {
       "id": "Q1_authors_affiliations",
       "category": "单篇-作者与机构",
+      "papers": [
+        "1706.03762v7.pdf"
+      ],
       "passed": true,
-      "elapsed_sec": 13.87,
+      "elapsed_sec": 11.54,
       "citation_count": 1,
-      "grounded_ratio": 1.0,
-      "answer_preview": "根据《Attention Is All You Need》（paper_id=1）的论文信息，该论文共有 **8 位作者**，其姓名与所属机构如下（按论文中署名顺序）：  | 序号 | 作者姓名             | 所属机构                     | |------|----------------------|------------------------------| | 1    | Ashish Va"
+      "grounded_ratio": 0.83,
+      "missing": [],
+      "answer_preview": "《Attention Is All You Need》论文的作者及其所属机构如下：  - **Ashish Vaswani**：Google Brain   - **Noam Shazeer**：Google Brain   - **Llion Jones**：Google Research   - **Niki Parmar**：Google Research   - **Jakob Uszkoreit**：Google Resear"
     },
     {
       "id": "Q2_hyperparams_and_gpu",
       "category": "单篇-超参数与GPU硬件",
+      "papers": [
+        "1706.03762v7.pdf"
+      ],
       "passed": true,
-      "elapsed_sec": 12.18,
-      "citation_count": 2,
+      "elapsed_sec": 17.45,
+      "citation_count": 4,
       "grounded_ratio": 1.0,
-      "answer_preview": "根据《Attention Is All You Need》论文原文：  - Adam 优化器的超参数设置为：β₁ = 0.9，β₂ = 0.98，ε = 10⁻⁹ `[E2]`； - 训练使用的硬件为：**1 台机器上共 8 块 NVIDIA P100 GPU** `[E5]`。  以上信息均直接引自论文第 7 页 “Training > Regularization” 与 “Training > Hardware and Schedu"
+      "missing": [],
+      "answer_preview": "根据检索结果，我来回答您的问题：  **Adam优化器参数设置：** - β1 = 0.9 [E2] - β2 = 0.98 [E2] - ε = 10⁻⁹ [E2]  **GPU硬件配置：** - GPU型号：NVIDIA P100 [E9][E12][E13] - GPU数量：8块 [E9][E12][E13]  这些信息均来自《Attention Is All You Need》论文的原文，其中Adam优化器参数在\"Trainin"
     },
     {
       "id": "Q3_bleu_comparison",
       "category": "单篇-BLEU分数比对",
+      "papers": [
+        "1706.03762v7.pdf"
+      ],
       "passed": true,
-      "elapsed_sec": 17.44,
-      "citation_count": 2,
-      "grounded_ratio": 0.5,
-      "answer_preview": "根据《Attention Is All You Need》（paper_id=1）原文：  - Transformer (big) 在 **WMT 2014 英德（EN-DE）** 翻译任务上的 BLEU 分数为 **28.4** `[E2][E5]`；   - 在 **WMT 2014 英法（EN-FR）** 翻译任务上的 BLEU 分数为 **41.8** `[E2]`。  该结果明确标注为 *single-model* state"
+      "elapsed_sec": 16.15,
+      "citation_count": 3,
+      "grounded_ratio": 0.67,
+      "missing": [],
+      "answer_preview": "根据论文 *Attention Is All You Need*（paper_id=1）原文：  - Transformer (big) 在 **WMT 2014 英德（EN-DE）翻译任务**上的 BLEU 分数为 **28.4** [E2][E5]；   - 在 **WMT 2014 英法（EN-FR）翻译任务**上的 BLEU 分数为 **41.8** [E2][E6]。  该结果明确标注为 single-model（非集成模型）"
     },
     {
       "id": "Q4_reference_11",
       "category": "单篇-指定文献完整引用",
+      "papers": [
+        "1706.03762v7.pdf"
+      ],
       "passed": true,
-      "elapsed_sec": 10.02,
+      "elapsed_sec": 8.25,
       "citation_count": 1,
       "grounded_ratio": 1.0,
-      "answer_preview": "《Attention Is All You Need》参考文献 [11] 的完整引用信息为：  Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. Deep residual learning for image recognition. In Proceedings of the IEEE Conference on Computer Vision and Pattern Re"
+      "missing": [],
+      "answer_preview": "参考文献 [11] 的完整引用信息为：  Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. Deep residual learning for image recognition. In Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, pages 770–778, 2"
     },
     {
       "id": "Q5_anti_hallucination_refusal",
       "category": "抗幻觉-缺失证据拒答",
+      "papers": [
+        "1706.03762v7.pdf"
+      ],
       "passed": true,
-      "elapsed_sec": 19.68,
-      "citation_count": 3,
-      "grounded_ratio": 0.5,
-      "answer_preview": "检索结果中未发现《Attention Is All You Need》（paper_id=1）第9节（Section 9）内容，也**未出现任何关于 “Quantum Hyper-Attention” 的表述**。所有返回的证据（E1–E6）均来自第3–6页及第10、13页，涉及的是注意力可视化（Figure 3/4）、位置编码、自注意力复杂度分析、多头注意力参数（如 h=8, dₖ=dᵥ=64）等，**无“Quantum Hyper-"
+      "elapsed_sec": 21.07,
+      "citation_count": 5,
+      "grounded_ratio": 0.0,
+      "missing": [],
+      "answer_preview": "检索结果 E1–E8 全部来自论文[paper_id=1]《Attention Is All You Need》，覆盖其“Background”至“Model Architecture > Attention > Multi-Head Attention”等章节，共返回8条证据。**所有证据中均未出现 “Quantum Hyper-Attention” 这一术语**；全文仅定义并使用标准术语：*Scaled Dot-Product At"
     },
     {
       "id": "Q6_multi_bert_vs_transformer",
       "category": "多篇对比-BERT与Transformer承袭与抛弃",
+      "papers": [
+        "1706.03762v7.pdf",
+        "BERT_1810.04805.pdf"
+      ],
       "passed": true,
-      "elapsed_sec": 44.19,
-      "citation_count": 9,
+      "elapsed_sec": 59.03,
+      "citation_count": 15,
       "grounded_ratio": 1.0,
-      "answer_preview": "根据检索到的原文证据，我对 BERT 与原始 Transformer（《Attention Is All You Need》）在模型架构上的承袭与抛弃关系进行系统性对比分析。  ### 一、模型架构：承袭与抛弃  | 维度 | 原始 Transformer (Vaswani et al., 2017) [E1][E4][E5] | BERT (Devlin et al., 2019) [E7][E8][E9] | 关系 | | :---"
+      "missing": [],
+      "answer_preview": "根据对原始 Transformer（2017）和 BERT（2018）两篇论文的系统性检索与分析，现将二者在模型架构上的承袭与抛弃关系总结如下：  ### 一、承袭关系（保留的设计）  1.  **核心计算单元：自注意力机制（Self-Attention）**     *   BERT 完全继承了 Transformer 论文中提出的多头自注意力（Multi-Head Self-Attention）机制，这是其模型架构的基石。该机制的数"
     },
     {
       "id": "Q7_multi_gpt_ln_context_window",
       "category": "多篇对比-GPT演化/LN位置/ContextWindow递增",
+      "papers": [
+        "1706.03762v7.pdf",
+        "GPT1_OpenAI_2018.pdf",
+        "GPT2_OpenAI_2019.pdf",
+        "GPT3_2005.14165.pdf",
+        "PreLN_2002.04745.pdf"
+      ],
       "passed": true,
-      "elapsed_sec": 54.2,
-      "citation_count": 3,
-      "grounded_ratio": 0.83,
-      "answer_preview": "根据检索结果，现对 GPT-1、GPT-2、GPT-3 与原始 Transformer 在参数量、Context Window 及 LayerNorm 位置上的演化与调整进行结构化对比：  ---  ### ✅ 一、参数量（Parameter Count）演化  | Model        | 参数量         | 层数 / 隐藏层维度（d_model） / 注意力头数 | 来源 | |--------------|------"
+      "elapsed_sec": 83.38,
+      "citation_count": 9,
+      "grounded_ratio": 0.33,
+      "missing": [],
+      "answer_preview": "以下是对 GPT-1、GPT-2、GPT-3 在**参数量演化**、**Context Window 递增过程**，以及相比原始 Transformer 在 **Layer Normalization（Post-LN vs Pre-LN）位置调整**上的系统性对比，严格依据检索到的原文证据（E1–E79）整理：  ---  ### ✅ 一、参数量（Parameter Count）演化  | 模型   | 参数量（确切数值） | 来源说明"
+    },
+    {
+      "id": "Q8_t6_ieee_segnet",
+      "category": "T6泛化-IEEE TPAMI(SegNet)",
+      "papers": [
+        "IEEE_TPAMI_SegNet_1511.00561.pdf"
+      ],
+      "passed": true,
+      "elapsed_sec": 26.55,
+      "citation_count": 6,
+      "grounded_ratio": 1.0,
+      "missing": [],
+      "answer_preview": "根据检索结果，我将回答关于 SegNet 编码器和解码器的问题：  1.  **编码器结构**：     *   SegNet 的编码器网络由 **13 个卷积层**构成 [E2][E3]。     *   其拓扑结构与 **VGG16 网络**的前 13 个卷积层完全相同 [E1][E2][E4]。  2.  **解码器上采样机制**：     *   SegNet 的解码器使用一种独特的上采样方法，即**复用（reuse）其对应编码"
+    },
+    {
+      "id": "Q9_t6_acm_xgboost",
+      "category": "T6泛化-ACM KDD(XGBoost)",
+      "papers": [
+        "ACM_KDD_XGBoost_1603.02754.pdf"
+      ],
+      "passed": true,
+      "elapsed_sec": 36.27,
+      "citation_count": 13,
+      "grounded_ratio": 1.0,
+      "missing": [],
+      "answer_preview": "根据检索到的 XGBoost 论文（paper_id=13）原文，其为处理稀疏数据和近似分裂查找分别提出了以下算法：  **1. 处理稀疏数据：稀疏感知分裂查找算法（Sparsity-aware Split Finding Algorithm）**  XGBoost 提出了一种统一处理所有稀疏模式的算法。该算法的核心是为树的每个节点添加一个“默认方向”（default direction），如图4所示 [E8]。当输入特征 `x` 中存"
+    },
+    {
+      "id": "Q10_t6_springer_unet",
+      "category": "T6泛化-Springer LNCS(U-Net)",
+      "papers": [
+        "Springer_MICCAI_UNet_1505.04597.pdf"
+      ],
+      "passed": true,
+      "elapsed_sec": 15.22,
+      "citation_count": 2,
+      "grounded_ratio": 0.67,
+      "missing": [],
+      "answer_preview": "根据U-Net原始论文（paper_id=14）中的实验结果：  - 在ISBI 2015细胞追踪挑战赛的**PhC-U373**数据集上，U-Net达到的平均IoU为**92.03%** [E1][E4]； - 在**DIC-HeLa**数据集上，U-Net达到的平均IoU为**77.56%** [E1][E4]。  这些数值明确列于论文第7页的**Table 2**中，并在正文第4节实验部分以文字形式复述（“92%”与“77.5%”"
+    },
+    {
+      "id": "Q11_t6_nature_pangu",
+      "category": "T6泛化-Nature收录(Pangu-Weather)",
+      "papers": [
+        "Nature_PanguWeather_2211.02556.pdf"
+      ],
+      "passed": true,
+      "elapsed_sec": 22.44,
+      "citation_count": 4,
+      "grounded_ratio": 0.67,
+      "missing": [],
+      "answer_preview": "根据检索到的原文证据，可以明确回答用户的问题：  *   **训练数据年限**：Pangu-Weather 使用了 **1979–2017 年共 39 年** 的 ERA5 再分析数据进行训练 [E9][E13]。 *   **网络结构**：采用了名为 **3D Earth-Specific Transformer (3DEST)** 的网络结构 [E3][E5][E13]。 *   **层级时间聚合策略**：该策略通过**训练四个具有"
     }
   ]
 }

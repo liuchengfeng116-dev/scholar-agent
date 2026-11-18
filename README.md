@@ -60,7 +60,7 @@ flowchart TB
    - 标准矢量双栏 PDF：`1706.03762v1.pdf` / `v7.pdf`（精细提取标题、8 位作者与 3 所机构、22 个 1–3 级章节、4 张表格、架构图、LaTeX 公式、40 条参考文献与视觉附录）。
    - 图像扫描版 PDF：`1706.03762v1_img.pdf`（无原生文本层，自动切换视觉多模态 OCR 并发识别，完整还原标题、双栏正文、公式与结构）。
    - 超长篇幅书籍：`UnderstandingDeepLearning_02_09_26_C.pdf`（共 **541 页**，分批流式解析 + 181 节目录树 + 内存平稳控制，约 55 秒完成全书切块与向量索引构建）。
-3. **3.3 多领域多排版风格泛化 (`data/official_pdf/extra_styles/`)**：包含 **IEEE**、**ACM**、**Springer LNCS**、**Nature** 四种排版风格的经典论文（涵盖 BERT、GPT-1/2/3、Pre-LN vs Post-LN、AlphaFold Evoformer），全面支撑跨文献联合推理与引用图谱构建。
+3. **3.3 多领域多排版风格泛化 (`data/official_pdf/real_corpus/`)**：全部采用 arXiv 与 OpenAI 官方公开发布的真实论文 PDF，包含 **BERT**（`1810.04805`）、**GPT-1 / GPT-2 / GPT-3**（`2005.14165`）、**Pre-LN**（`2002.04745`），以及 **IEEE TPAMI（SegNet）**、**ACM KDD（XGBoost）**、**Springer LNCS / MICCAI（U-Net）**、**Nature 收录论文 Pangu-Weather（预印本）** 四类国际期刊与顶会排版风格，全面支撑跨文献联合推理与真实引用图谱构建。
 
 ---
 
