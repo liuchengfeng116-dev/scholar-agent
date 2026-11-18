@@ -27,7 +27,26 @@ def get_paper_outline(ctx: AgentContext, paper_id: int) -> dict:
         .limit(80)
         .all()
     )
+    meta_text = (
+        f"Title: {p.title}\n"
+        f"Authors: {p.authors}\n"
+        f"Affiliations: {p.affiliations}\n"
+        f"Year/Venue: {p.year} {p.venue}\n"
+        f"Abstract: {p.abstract}"
+    )
+    ref = ctx.add_evidence(
+        {
+            "paper_id": p.id,
+            "paper_title": p.title or p.filename,
+            "block_id": f"outline_{p.id}",
+            "page": 1,
+            "bbox": [50, 50, 550, 300],
+            "section_path": "Metadata & Abstract",
+            "text": meta_text,
+        }
+    )
     return {
+        "ref": ref,
         "paper_id": p.id,
         "title": p.title,
         "authors": p.authors,

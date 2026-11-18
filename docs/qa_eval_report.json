@@ -1,0 +1,70 @@
+{
+  "total": 7,
+  "passed": 7,
+  "accuracy": 1.0,
+  "cases": [
+    {
+      "id": "Q1_authors_affiliations",
+      "category": "单篇-作者与机构",
+      "passed": true,
+      "elapsed_sec": 13.87,
+      "citation_count": 1,
+      "grounded_ratio": 1.0,
+      "answer_preview": "根据《Attention Is All You Need》（paper_id=1）的论文信息，该论文共有 **8 位作者**，其姓名与所属机构如下（按论文中署名顺序）：  | 序号 | 作者姓名             | 所属机构                     | |------|----------------------|------------------------------| | 1    | Ashish Va"
+    },
+    {
+      "id": "Q2_hyperparams_and_gpu",
+      "category": "单篇-超参数与GPU硬件",
+      "passed": true,
+      "elapsed_sec": 12.18,
+      "citation_count": 2,
+      "grounded_ratio": 1.0,
+      "answer_preview": "根据《Attention Is All You Need》论文原文：  - Adam 优化器的超参数设置为：β₁ = 0.9，β₂ = 0.98，ε = 10⁻⁹ `[E2]`； - 训练使用的硬件为：**1 台机器上共 8 块 NVIDIA P100 GPU** `[E5]`。  以上信息均直接引自论文第 7 页 “Training > Regularization” 与 “Training > Hardware and Schedu"
+    },
+    {
+      "id": "Q3_bleu_comparison",
+      "category": "单篇-BLEU分数比对",
+      "passed": true,
+      "elapsed_sec": 17.44,
+      "citation_count": 2,
+      "grounded_ratio": 0.5,
+      "answer_preview": "根据《Attention Is All You Need》（paper_id=1）原文：  - Transformer (big) 在 **WMT 2014 英德（EN-DE）** 翻译任务上的 BLEU 分数为 **28.4** `[E2][E5]`；   - 在 **WMT 2014 英法（EN-FR）** 翻译任务上的 BLEU 分数为 **41.8** `[E2]`。  该结果明确标注为 *single-model* state"
+    },
+    {
+      "id": "Q4_reference_11",
+      "category": "单篇-指定文献完整引用",
+      "passed": true,
+      "elapsed_sec": 10.02,
+      "citation_count": 1,
+      "grounded_ratio": 1.0,
+      "answer_preview": "《Attention Is All You Need》参考文献 [11] 的完整引用信息为：  Kaiming He, Xiangyu Zhang, Shaoqing Ren, and Jian Sun. Deep residual learning for image recognition. In Proceedings of the IEEE Conference on Computer Vision and Pattern Re"
+    },
+    {
+      "id": "Q5_anti_hallucination_refusal",
+      "category": "抗幻觉-缺失证据拒答",
+      "passed": true,
+      "elapsed_sec": 19.68,
+      "citation_count": 3,
+      "grounded_ratio": 0.5,
+      "answer_preview": "检索结果中未发现《Attention Is All You Need》（paper_id=1）第9节（Section 9）内容，也**未出现任何关于 “Quantum Hyper-Attention” 的表述**。所有返回的证据（E1–E6）均来自第3–6页及第10、13页，涉及的是注意力可视化（Figure 3/4）、位置编码、自注意力复杂度分析、多头注意力参数（如 h=8, dₖ=dᵥ=64）等，**无“Quantum Hyper-"
+    },
+    {
+      "id": "Q6_multi_bert_vs_transformer",
+      "category": "多篇对比-BERT与Transformer承袭与抛弃",
+      "passed": true,
+      "elapsed_sec": 44.19,
+      "citation_count": 9,
+      "grounded_ratio": 1.0,
+      "answer_preview": "根据检索到的原文证据，我对 BERT 与原始 Transformer（《Attention Is All You Need》）在模型架构上的承袭与抛弃关系进行系统性对比分析。  ### 一、模型架构：承袭与抛弃  | 维度 | 原始 Transformer (Vaswani et al., 2017) [E1][E4][E5] | BERT (Devlin et al., 2019) [E7][E8][E9] | 关系 | | :---"
+    },
+    {
+      "id": "Q7_multi_gpt_ln_context_window",
+      "category": "多篇对比-GPT演化/LN位置/ContextWindow递增",
+      "passed": true,
+      "elapsed_sec": 54.2,
+      "citation_count": 3,
+      "grounded_ratio": 0.83,
+      "answer_preview": "根据检索结果，现对 GPT-1、GPT-2、GPT-3 与原始 Transformer 在参数量、Context Window 及 LayerNorm 位置上的演化与调整进行结构化对比：  ---  ### ✅ 一、参数量（Parameter Count）演化  | Model        | 参数量         | 层数 / 隐藏层维度（d_model） / 注意力头数 | 来源 | |--------------|------"
+    }
+  ]
+}
