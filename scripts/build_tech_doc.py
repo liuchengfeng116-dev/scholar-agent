@@ -232,7 +232,7 @@ def render_pdf(html: str) -> int:
     with pymupdf.open(OUT_PDF) as doc:
         pages = doc.page_count
         doc.set_metadata(
-            {"title": "ScholarAgent 智研助手 技术文档", "author": "李嘉成（重庆科技大学）", "subject": "传智杯 AI 大模型创新应用挑战赛"}
+            {"title": "ScholarAgent 智研助手 技术文档", "author": "ScholarAgent", "subject": "传智杯 AI 大模型创新应用挑战赛"}
         )
         doc.saveIncr()
     return pages

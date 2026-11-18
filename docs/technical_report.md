@@ -2,7 +2,6 @@
 
 **赛项主题**：智领科研·意图驱动：基于大模型与 Agent 架构的全流程科研助手构建挑战赛  
 **作品名称**：ScholarAgent（智研助手）全流程多智能体科研工作台  
-**参赛作者**：李嘉成（重庆科技大学 · 个人赛）  
 **代码仓库**：https://github.com/liuchengfeng116-dev/scholar-agent
 
 ---

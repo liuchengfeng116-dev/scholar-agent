@@ -69,7 +69,7 @@ SEGMENTS: list[SegmentSpec] = [
         act_num=1,
         act_title="第一幕 · 项目介绍与全栈架构亮点",
         title="参赛作品介绍与登录工作台",
-        narration="各位评委老师好！我是来自重庆科技大学的李嘉成。今天为您演示我独立开发的参赛作品：ScholarAgent 智研全流程科研助手。",
+        narration="各位评委老师好！今天为您演示参赛作品：ScholarAgent 智研全流程科研助手。",
         cursor_a=(960, 460),
         cursor_b=(960, 565),
         box_a=(680, 250, 560, 430),
@@ -546,8 +546,8 @@ def prepare_all_audio() -> None:
     )
 
 
-def capture_missing_or_updated_shots(username: str, password: str) -> None:
-    """复用已成功截取的前序高清截图，并补全/更新阅读器、含金量评估、Future Work 与 Copilot 画面。"""
+def capture_all_ui_shots(username: str, password: str) -> None:
+    """使用 Playwright (1920x1080) 完整驱动前后端界面，从零采集全部 32 个分镜共 64 张真实画面。"""
     FRAMES_DIR.mkdir(parents=True, exist_ok=True)
     for seg in SEGMENTS:
         seg.shot_a = FRAMES_DIR / f"seg_{seg.idx:02d}_a.png"
@@ -563,14 +563,128 @@ def capture_missing_or_updated_shots(username: str, password: str) -> None:
         ctx = browser.new_context(viewport={"width": W, "height": H}, device_scale_factor=1.0)
         page = ctx.new_page()
 
+        # ---------- 第一幕 Seg 01~04：登录、工作台、架构与六大模块导航 ----------
         page.goto(BASE_URL, wait_until="networkidle")
+        page.wait_for_timeout(800)
+        snap(page, 1, "a")
         page.get_by_placeholder("请输入用户名").fill(username)
         page.get_by_placeholder("请输入密码").fill(password)
+        page.wait_for_timeout(300)
+        snap(page, 1, "b")
+
         page.get_by_role("button", name="登录进入工作台").click()
         page.get_by_text("智研全流程科研助手").wait_for(timeout=20000)
-        page.wait_for_timeout(1200)
+        page.wait_for_timeout(1500)
+        for seg_idx in (2, 3, 4):
+            snap(page, seg_idx, "a")
+            snap(page, seg_idx, "b")
 
-        # ---------- 补强 Seg 19, 21, 22（模块三：经文献库跳转至 Attention Is All You Need，演示划词翻译 + 双向引用跳转 + 跳回正文） ----------
+        # ---------- 第二幕 Seg 05~11：文献库分页、v1/v7 语义去重比对、结构化抽屉与 541 页教材 ----------
+        snap(page, 5, "a")
+        page2_btn = page.locator(".ant-pagination-item-2")
+        if page2_btn.count() > 0:
+            page2_btn.click()
+            page.wait_for_timeout(800)
+        snap(page, 5, "b")
+        page1_btn = page.locator(".ant-pagination-item-1")
+        if page1_btn.count() > 0:
+            page1_btn.click()
+            page.wait_for_timeout(600)
+
+        snap(page, 6, "a")
+        v1_pdf = ROOT / "data" / "official_pdf" / "1706.03762v1.pdf"
+        page.locator("input[type='file']").first.set_input_files(str(v1_pdf))
+        try:
+            page.get_by_text("语义级文献去重预警与版本比对").wait_for(timeout=25000)
+            page.wait_for_timeout(1200)
+        except PlaywrightTimeoutError:
+            btn_dup = page.get_by_role("button", name=re.compile("立即比对并决策|处理去重"))
+            if btn_dup.count() > 0:
+                btn_dup.first.click()
+                page.wait_for_timeout(1200)
+        snap(page, 6, "b")
+        snap(page, 7, "a")
+        keep_btn = page.get_by_role("button", name=re.compile("保留库中现有版本"))
+        if keep_btn.count() > 0:
+            keep_btn.first.click()
+            page.wait_for_timeout(1500)
+        snap(page, 7, "b")
+
+        sb = page.get_by_placeholder("搜索标题 / arXiv ID / 文件名")
+        sb.fill("Attention Is All You Need")
+        page.wait_for_timeout(600)
+        snap(page, 8, "a")
+        row_att = page.locator("tr", has_text="Attention Is All You Need").first
+        row_att.get_by_role("button", name="结构化详情").click()
+        page.wait_for_timeout(1500)
+        snap(page, 8, "b")
+
+        for pat, seg_idx, sub in [
+            (r"^表格", 9, "a"),
+            (r"^公式", 9, "b"),
+            (r"^图表", 10, "a"),
+            (r"^参考文献", 10, "b"),
+        ]:
+            tab = page.locator(".ant-drawer").get_by_text(re.compile(pat))
+            if tab.count() > 0:
+                tab.first.click()
+                page.wait_for_timeout(900)
+            snap(page, seg_idx, sub)
+
+        close_btn = page.locator(".ant-drawer-close")
+        if close_btn.count() > 0:
+            close_btn.first.click()
+            page.wait_for_timeout(600)
+
+        sb.fill("Understanding Deep Learning")
+        page.wait_for_timeout(600)
+        snap(page, 11, "a")
+        page.locator("tr", has_text="Understanding Deep Learning").first.get_by_role("button", name="结构化详情").click()
+        page.wait_for_timeout(1500)
+        snap(page, 11, "b")
+        if close_btn.count() > 0:
+            close_btn.first.click()
+            page.wait_for_timeout(600)
+        sb.fill("")
+        page.wait_for_timeout(400)
+
+        # ---------- 第三幕 Seg 12~17：抗幻觉 Agent 问答、协同轨迹、跳页高亮与拒答护栏 ----------
+        page.get_by_role("menuitem", name="抗幻觉 Agent 问答").click()
+        page.wait_for_timeout(1500)
+        snap(page, 12, "a")
+        conv_att = page.locator(".ant-list-item", has_text="Attention Is All You Need").first
+        if conv_att.count() > 0:
+            conv_att.click()
+            page.wait_for_timeout(1200)
+        for seg_idx in (12, 13, 14):
+            if seg_idx > 12:
+                snap(page, seg_idx, "a")
+            snap(page, seg_idx, "b")
+        snap(page, 15, "a")
+        e2_tag = page.get_by_text(re.compile(r"E2.*p\.7|\[E2\]")).first
+        if e2_tag.count() > 0:
+            e2_tag.click()
+            page.wait_for_timeout(3500)
+        snap(page, 15, "b")
+
+        page.get_by_role("menuitem", name="抗幻觉 Agent 问答").click()
+        page.wait_for_timeout(1200)
+        snap(page, 16, "a")
+        conv_multi = page.locator(".ant-list-item", has_text="对比 BERT").first
+        if conv_multi.count() > 0:
+            conv_multi.click()
+            page.wait_for_timeout(1200)
+        snap(page, 16, "b")
+        snap(page, 17, "a")
+        conv_guard = page.locator(".ant-list-item", has_text="Dynamic Sparse").first
+        if conv_guard.count() > 0:
+            conv_guard.click()
+            page.wait_for_timeout(1200)
+        snap(page, 17, "b")
+
+        # ---------- 第四幕 Seg 18~22：经文献库跳转至 Attention Is All You Need，演示阅读、划词、联动滚动与双向跳转 ----------
+        page.get_by_role("menuitem", name="文献库与解析").click()
+        page.wait_for_timeout(800)
         sb = page.get_by_placeholder("搜索标题 / arXiv ID / 文件名")
         sb.fill("Attention Is All You Need")
         page.wait_for_timeout(600)
@@ -581,6 +695,13 @@ def capture_missing_or_updated_shots(username: str, password: str) -> None:
             page.wait_for_timeout(1500)
         except PlaywrightTimeoutError:
             page.wait_for_timeout(3000)
+        snap(page, 18, "a")
+
+        tree_node = page.locator(".ant-tree-node-content-wrapper", has_text=re.compile(r"Attention|Model Architecture")).first
+        if tree_node.count() > 0:
+            tree_node.click()
+            page.wait_for_timeout(2000)
+        snap(page, 18, "b")
 
         page_input = page.locator(".ant-input-number-input").first
         if page_input.count() > 0:
@@ -603,6 +724,7 @@ def capture_missing_or_updated_shots(username: str, password: str) -> None:
             }"""
         )
         page.wait_for_timeout(600)
+        snap(page, 19, "a")
         btn_snip = page.get_by_role("button", name=re.compile("划词翻译"))
         if btn_snip.count() > 0 and not btn_snip.first.is_disabled():
             btn_snip.first.click()
@@ -614,6 +736,19 @@ def capture_missing_or_updated_shots(username: str, password: str) -> None:
             snap(page, 19, "b")
             page.keyboard.press("Escape")
             page.wait_for_timeout(300)
+        else:
+            snap(page, 19, "b")
+
+        snap(page, 20, "a")
+        page.evaluate(
+            """() => {
+                const panes = Array.from(document.querySelectorAll('div')).filter(el => el.scrollHeight > el.clientHeight + 150 && el.clientHeight > 300);
+                panes.forEach(p => { p.scrollTop = 260; p.dispatchEvent(new Event('scroll')); });
+            }"""
+        )
+        page.wait_for_timeout(1000)
+        snap(page, 20, "b")
+        snap(page, 21, "a")
 
         tab_cite = page.locator(".ant-tabs-tab", has_text="双向引用跳转")
         if tab_cite.count() > 0:
@@ -633,11 +768,18 @@ def capture_missing_or_updated_shots(username: str, password: str) -> None:
                 except PlaywrightTimeoutError:
                     pass
                 page.wait_for_timeout(2500)
-                snap(page, 22, "b")
+            snap(page, 22, "b")
 
-        # ---------- 补强 Seg 24, 25（模块四：选择 Attention Is All You Need 并等待含金量评估表格行渲染完成） ----------
+        # ---------- 第五幕 Seg 23~28：模块四推荐与引用含金量评估 + 模块五引用图谱、综述与 Future Work 去伪 ----------
         page.get_by_role("menuitem", name="检索下钻与推荐").click()
-        page.wait_for_timeout(1500)
+        page.wait_for_timeout(1800)
+        snap(page, 23, "a")
+        like_btn = page.get_by_role("button", name=re.compile("赞")).first
+        if like_btn.count() > 0:
+            like_btn.click()
+            page.wait_for_timeout(800)
+        snap(page, 23, "b")
+
         tab_drill = page.locator(".ant-tabs-tab", has_text="智能下钻与引用含金量筛选")
         if tab_drill.count() > 0:
             tab_drill.first.click()
@@ -646,7 +788,6 @@ def capture_missing_or_updated_shots(username: str, password: str) -> None:
         if sel_box.count() > 0:
             sel_box.click()
             page.wait_for_timeout(400)
-            # 滚动虚拟列表到底部以显露 Attention Is All You Need（id=1）
             page.evaluate(
                 """() => {
                     const holder = document.querySelector('.rc-virtual-list-holder');
@@ -671,9 +812,17 @@ def capture_missing_or_updated_shots(username: str, password: str) -> None:
         snap(page, 25, "a")
         snap(page, 25, "b")
 
-        # ---------- 补强 Seg 28（模块五：Future Work 前沿去伪标签页） ----------
         page.get_by_role("menuitem", name="引用图谱与综述").click()
-        page.wait_for_timeout(2500)
+        page.wait_for_timeout(2800)
+        snap(page, 26, "a")
+        snap(page, 26, "b")
+        snap(page, 27, "a")
+        tab_survey = page.locator(".ant-tabs-tab", has_text="自动领域综述")
+        if tab_survey.count() > 0:
+            tab_survey.first.click()
+            page.wait_for_timeout(1000)
+        snap(page, 27, "b")
+        snap(page, 28, "a")
         tab_fw = page.locator(".ant-tabs-tab", has_text="Future Work 前沿去伪")
         if tab_fw.count() > 0:
             tab_fw.first.click()
@@ -810,7 +959,7 @@ def make_finale_overlay_image(base_img: Image.Image, fonts: dict[str, ImageFont.
 
     draw.rounded_rectangle((180, 110, W - 180, H - 150), radius=24, fill=(17, 30, 58, 245), outline=(56, 189, 248, 255), width=3)
     draw.text((240, 155), "ScholarAgent 智研助手 · 全流程科研多智能体系统", font=fonts["hero_xl"], fill=(255, 255, 255, 255))
-    draw.text((240, 222), "传智杯 · AI 大模型创新应用挑战赛  |  参赛选手：李嘉成（重庆科技大学 · 个人赛）", font=fonts["hero_lg"], fill=(125, 211, 252, 255))
+    draw.text((240, 222), "传智杯 · AI 大模型创新应用挑战赛  |  智领科研 · 意图驱动全流程科研助手", font=fonts["hero_lg"], fill=(125, 211, 252, 255))
 
     cards = [
         ("六大核心 Agent 能力", "Task Planning 多步规划 · 短长期混合 Memory · 11 项受控 Function Calling · Multi-Agent 协同 · 像素级 Source Tracing · Guardrails 护栏"),
@@ -1084,7 +1233,7 @@ def main() -> None:
     WORK_DIR.mkdir(parents=True, exist_ok=True)
 
     prepare_all_audio()
-    capture_missing_or_updated_shots(user, pwd)
+    capture_all_ui_shots(user, pwd)
     encode_full_video()
 
 
