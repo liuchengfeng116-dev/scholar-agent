@@ -39,6 +39,16 @@ def _extract_used_citations(answer: str, evidence: dict[str, dict]) -> list[dict
     if not seen and evidence:
         # 模型未显式标注 [E#] 时，保留前 3 条高分证据供前端溯源展示
         seen = list(evidence.keys())[:3]
+    elif seen and evidence:
+        # 多篇检索对比时，若某篇已召回证据的论文未被显式列出引用角标，补齐其首条检索依据供核验
+        cited_pids = {evidence[r].get("paper_id") for r in seen if r in evidence}
+        all_pids = {ev.get("paper_id") for ev in evidence.values() if ev.get("paper_id")}
+        if 2 <= len(all_pids) <= 6:
+            for ref, ev in evidence.items():
+                pid = ev.get("paper_id")
+                if pid and pid not in cited_pids:
+                    seen.append(ref)
+                    cited_pids.add(pid)
     out = []
     for ref in seen:
         ev = evidence[ref]

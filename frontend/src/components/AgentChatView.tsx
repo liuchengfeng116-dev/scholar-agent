@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -56,34 +56,39 @@ export const AgentChatView: React.FC<Props> = ({ papers, onJumpEvidence }) => {
   const [memories, setMemories] = useState<Array<{ id: number; kind: string; content: string; weight: number }>>([])
   const [query, setQuery] = useState('')
   const [sending, setSending] = useState(false)
-  const bottomRef = useRef<HTMLDivElement | null>(null)
+  const msgBoxRef = useRef<HTMLDivElement | null>(null)
+  const prevLenRef = useRef<number>(0)
 
-  const loadSidebar = async () => {
+  const loadSidebar = useCallback(async () => {
     try {
       const [cList, memList] = await Promise.all([
         api<Conv[]>('/conversations'),
-        api<typeof memories>('/auth/memories'),
+        api<Array<{ id: number; kind: string; content: string; weight: number }>>('/auth/memories'),
       ])
       setConvs(cList)
       setMemories(memList)
     } catch {
       /* ignore */
     }
-  }
-
-  useEffect(() => {
-    void loadSidebar()
   }, [])
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, liveTrace])
+    void loadSidebar()
+  }, [loadSidebar])
+
+  useEffect(() => {
+    if (messages.length > prevLenRef.current && sending && msgBoxRef.current) {
+      msgBoxRef.current.scrollTop = msgBoxRef.current.scrollHeight
+    }
+    prevLenRef.current = messages.length
+  }, [messages, sending])
 
   const openConv = async (c: Conv) => {
     setConvId(c.id)
     setSelectedPids(c.paper_ids || [])
     const rows = await api<ChatMessage[]>(`/conversations/${c.id}/messages`)
     setMessages(rows)
+    if (msgBoxRef.current) msgBoxRef.current.scrollTop = 0
     const lastAssist = [...rows].reverse().find((m) => m.role === 'assistant' && m.trace?.length)
     setLiveTrace(lastAssist?.trace || [])
   }
@@ -141,7 +146,7 @@ export const AgentChatView: React.FC<Props> = ({ papers, onJumpEvidence }) => {
   }
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 330px', gap: 12, height: 'calc(100vh - 110px)' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr 330px', gap: 12, height: 'calc(100vh - 96px)' }}>
       {/* 左栏：会话列表与长期 Memory 画像 */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
         <Card
@@ -221,7 +226,7 @@ export const AgentChatView: React.FC<Props> = ({ papers, onJumpEvidence }) => {
           </Space>
         }
       >
-        <div style={{ flex: 1, overflowY: 'auto', paddingRight: 6 }}>
+        <div ref={msgBoxRef} style={{ flex: 1, overflowY: 'auto', paddingRight: 6 }}>
           {messages.length === 0 ? (
             <div style={{ padding: '24px 12px' }}>
               <Empty description="从下方示例问题开始，体验多文推理与源头溯源锚点" />
@@ -303,7 +308,6 @@ export const AgentChatView: React.FC<Props> = ({ papers, onJumpEvidence }) => {
               </div>
             ))
           )}
-          <div ref={bottomRef} />
         </div>
 
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
@@ -335,7 +339,8 @@ export const AgentChatView: React.FC<Props> = ({ papers, onJumpEvidence }) => {
       <Card
         size="small"
         title="Agent 协同执行轨迹"
-        bodyStyle={{ overflowY: 'auto', height: 'calc(100vh - 165px)', padding: 12 }}
+        style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
+        bodyStyle={{ flex: 1, overflowY: 'auto', minHeight: 0, padding: 12 }}
       >
         {liveTrace.length === 0 ? (
           <Alert

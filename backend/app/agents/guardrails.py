@@ -65,6 +65,17 @@ def check_output(
     warnings: list[str] = []
     valid_refs = set(evidence.keys())
 
+    # 将 <E8>、【E8】 及合并写法 [E1, E7] / [E1、E7] 统一规范化为独立的 [E1][E7]
+    def _expand_group(m: re.Match[str]) -> str:
+        refs = re.findall(r"E\d+", m.group(0))
+        return "".join(f"[{r}]" for r in refs)
+
+    normalized = re.sub(
+        r"[\[<【]\s*E\d+(?:\s*[,，、;；]\s*E\d+)*\s*[\]>】]",
+        _expand_group,
+        answer or "",
+    )
+
     # 清理不存在的引用编号
     def _clean_ref(match: re.Match[str]) -> str:
         ref = match.group(1)
@@ -73,7 +84,7 @@ def check_output(
         warnings.append(f"已剔除无效引用标记 [{ref}]")
         return ""
 
-    cleaned = re.sub(r"\[(E\d+)\]", _clean_ref, answer or "")
+    cleaned = re.sub(r"\[(E\d+)\]", _clean_ref, normalized)
 
     if strict_grounding and not evidence:
         refusal = (

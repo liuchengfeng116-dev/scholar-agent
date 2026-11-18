@@ -66,12 +66,12 @@ def search_papers(
         "properties": {
             "paper_id": {"type": "integer", "description": "目标论文ID"},
             "query": {"type": "string", "description": "检索问题或关键词"},
-            "top_k": {"type": "integer", "default": 6},
+            "top_k": {"type": "integer", "default": 8},
         },
         "required": ["paper_id", "query"],
     },
 )
-def search_single_paper(ctx: AgentContext, paper_id: int, query: str, top_k: int = 6) -> list[dict]:
+def search_single_paper(ctx: AgentContext, paper_id: int, query: str, top_k: int = 8) -> list[dict]:
     hits = hybrid_search(
         ctx.db,
         user_id=ctx.user_id,

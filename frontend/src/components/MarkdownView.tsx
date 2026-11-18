@@ -22,6 +22,15 @@ export const MarkdownView: React.FC<Props> = ({ content, citations = [], onClick
     return m
   }, [citations])
 
+  const normalizedContent = useMemo(
+    () =>
+      (content || '').replace(
+        /[[<【]\s*E\d+(?:\s*[,，、;；]\s*E\d+)*\s*[\]>】]/g,
+        (m) => (m.match(/E\d+/g) || []).map((r) => `[${r}]`).join(''),
+      ),
+    [content],
+  )
+
   // 将文本中的 [E1] 转成可点击引用芯片，或保留原文本
   const renderTextWithRefs = (text: string) => {
     const parts = text.split(/(\[E\d+\])/g)
@@ -51,36 +60,35 @@ export const MarkdownView: React.FC<Props> = ({ content, citations = [], onClick
     })
   }
 
+  const renderInline = (nodes: React.ReactNode): React.ReactNode =>
+    React.Children.map(nodes, (ch) => {
+      if (typeof ch === 'string') return renderTextWithRefs(ch)
+      if (React.isValidElement<{ children?: React.ReactNode }>(ch) && ch.props?.children) {
+        return React.cloneElement(ch, undefined, renderInline(ch.props.children))
+      }
+      return ch
+    })
+
   return (
     <div className="scholar-md">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          p: ({ children }) => (
-            <p style={{ marginBottom: 8 }}>
-              {React.Children.map(children, (ch) =>
-                typeof ch === 'string' ? renderTextWithRefs(ch) : ch,
-              )}
-            </p>
-          ),
-          li: ({ children }) => (
-            <li>
-              {React.Children.map(children, (ch) =>
-                typeof ch === 'string' ? renderTextWithRefs(ch) : ch,
-              )}
-            </li>
-          ),
-          td: ({ children }) => (
-            <td>
-              {React.Children.map(children, (ch) =>
-                typeof ch === 'string' ? renderTextWithRefs(ch) : ch,
-              )}
-            </td>
-          ),
+          p: ({ children }) => <p style={{ marginBottom: 8 }}>{renderInline(children)}</p>,
+          li: ({ children }) => <li>{renderInline(children)}</li>,
+          td: ({ children }) => <td>{renderInline(children)}</td>,
+          th: ({ children }) => <th>{renderInline(children)}</th>,
+          code: ({ children, className }) => {
+            const raw = String(children || '').trim()
+            if (!className && /^\[E\d+\]$/.test(raw)) {
+              return <>{renderTextWithRefs(raw)}</>
+            }
+            return <code className={className}>{children}</code>
+          },
         }}
       >
-        {content}
+        {normalizedContent}
       </ReactMarkdown>
     </div>
   )
