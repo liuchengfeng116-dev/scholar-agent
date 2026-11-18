@@ -85,36 +85,49 @@ def extract_version_info(text: str, filename: str) -> dict:
 
 def extract_quick_text(pdf_path: Path, max_pages: int = 5) -> str:
     """快速抽取用于去重比对的正文（扫描件自动降级用 VLM OCR 读第 1 页）。"""
-    doc = pymupdf.open(pdf_path)
-    try:
-        n = len(doc)
-        idxs = list(range(min(3, n)))
-        if n > 4:
-            idxs.extend(range(max(3, n - 2), n))
-        text = "\n".join(doc[i].get_text("text") for i in idxs).strip()
-        if len(text) < 80 and n > 0:
-            # 无原生文本层的扫描 PDF，取第 1 页图像交由 OCR 模型识别，保证语义去重同样生效
-            try:
-                pix = doc[0].get_pixmap(dpi=130, alpha=False)
-                text = llm.vision(
-                    pix.tobytes("png"),
-                    "请完整识别该学术页面中的标题、作者与正文文字，直接输出纯文本。",
-                    model=settings.ocr_model,
-                    max_tokens=2048,
-                )
-            except Exception:  # noqa: BLE001
-                log.warning("扫描件去重 OCR 失败: %s", pdf_path.name)
-        return text
-    finally:
-        doc.close()
+    from app.parsing.detector import MUPDF_LOCK
+
+    first_png: bytes | None = None
+    with MUPDF_LOCK:
+        doc = pymupdf.open(pdf_path)
+        try:
+            n = len(doc)
+            idxs = list(range(min(3, n)))
+            if n > 4:
+                idxs.extend(range(max(3, n - 2), n))
+            text = "\n".join(doc[i].get_text("text") for i in idxs).strip()
+            if len(text) < 80 and n > 0:
+                try:
+                    pix = doc[0].get_pixmap(dpi=130, alpha=False)
+                    first_png = pix.tobytes("png")
+                except Exception:  # noqa: BLE001
+                    first_png = None
+        finally:
+            doc.close()
+
+    if len(text) < 80 and first_png:
+        # 释放 MuPDF 锁后再调用 VLM 网络请求，避免阻塞其他解析线程
+        try:
+            text = llm.vision(
+                first_png,
+                "请完整识别该学术页面中的标题、作者与正文文字，直接输出纯文本。",
+                model=settings.ocr_model,
+                max_tokens=2048,
+            )
+        except Exception:  # noqa: BLE001
+            log.warning("扫描件去重 OCR 失败: %s", pdf_path.name)
+    return text
 
 
 def _full_pdf_text(pdf_path: Path, max_pages: int = 40) -> str:
-    doc = pymupdf.open(pdf_path)
-    try:
-        return "\n".join(doc[i].get_text("text") for i in range(min(len(doc), max_pages)))
-    finally:
-        doc.close()
+    from app.parsing.detector import MUPDF_LOCK
+
+    with MUPDF_LOCK:
+        doc = pymupdf.open(pdf_path)
+        try:
+            return "\n".join(doc[i].get_text("text") for i in range(min(len(doc), max_pages)))
+        finally:
+            doc.close()
 
 
 def _existing_paper_text(db: Session, paper: Paper) -> str:

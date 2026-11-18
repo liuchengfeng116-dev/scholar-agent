@@ -113,10 +113,12 @@ def hybrid_search(
     for rank, (cid, _) in enumerate(dense_hits, start=1):
         rrf[cid] = rrf.get(cid, 0.0) + 1.2 / (50 + rank)
 
-    # 表格与元数据轻微加权（数值/作者类精准问答更稳定）
+    # 表格与首页元数据/摘要轻微加权（数值/作者/模型总规模问答更稳定）
     for cid in list(rrf.keys()):
         c = chunk_map.get(cid)
-        if c and c.type in ("table", "meta"):
+        if c and c.type == "meta":
+            rrf[cid] *= 1.22
+        elif c and c.type == "table":
             rrf[cid] *= 1.15
 
     ranked_ids = sorted(rrf.keys(), key=lambda cid: rrf[cid], reverse=True)

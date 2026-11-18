@@ -17,23 +17,26 @@ from app.llm import client as llm
 log = logging.getLogger(__name__)
 
 _chroma_client: chromadb.ClientAPI | None = None
+_chroma_dir_key: str = ""
 _COLLECTION_NAME = "scholar_chunks"
 
 
 def get_chroma_collection():
-    global _chroma_client
-    if _chroma_client is None:
-        chroma_dir = settings.data_path / "chroma"
-        # Windows 下 Chroma Rust HNSW 引擎对含中文路径存在兼容问题，非 ASCII 路径自动映射到 LOCALAPPDATA
-        if not str(chroma_dir).isascii():
-            import hashlib
-            import os
+    global _chroma_client, _chroma_dir_key
+    chroma_dir = settings.data_path / "chroma"
+    # Windows 下 Chroma Rust HNSW 引擎对含中文路径存在兼容问题，非 ASCII 路径自动映射到 LOCALAPPDATA
+    if not str(chroma_dir).isascii():
+        import hashlib
+        import os
 
-            tag = hashlib.md5(str(chroma_dir).encode("utf-8")).hexdigest()[:10]
-            base = Path(os.environ.get("LOCALAPPDATA", "C:/Temp")) / "scholar_agent_chroma"
-            chroma_dir = base / tag
+        tag = hashlib.md5(str(chroma_dir).encode("utf-8")).hexdigest()[:10]
+        base = Path(os.environ.get("LOCALAPPDATA", "C:/Temp")) / "scholar_agent_chroma"
+        chroma_dir = base / tag
+    key = str(chroma_dir)
+    if _chroma_client is None or _chroma_dir_key != key:
         chroma_dir.mkdir(parents=True, exist_ok=True)
-        _chroma_client = chromadb.PersistentClient(path=str(chroma_dir))
+        _chroma_client = chromadb.PersistentClient(path=key)
+        _chroma_dir_key = key
     return _chroma_client.get_or_create_collection(
         name=_COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},

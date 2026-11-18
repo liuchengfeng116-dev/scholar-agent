@@ -50,7 +50,7 @@ def test_module3_reader_and_translation(full_client):
     from app.parsing.pipeline import parse_paper
 
     with v7.open("rb") as f:
-        up = c.post("/api/papers/upload?skip_dedup=true", headers=headers, files={"files": ("1706.03762v7.pdf", f, "application/pdf")})
+        up = c.post("/api/papers/upload?skip_dedup=true&auto_parse=false", headers=headers, files={"files": ("1706.03762v7.pdf", f, "application/pdf")})
     pid = up.json()["items"][0]["paper"]["id"]
     parse_paper(pid, enable_vlm_formulas=False)
 
@@ -131,7 +131,7 @@ def test_module4_and_module5_scout_graph_and_future_work(full_client, tmp_path):
     pids = []
     for path in (p1, p2, p3):
         with path.open("rb") as f:
-            up = c.post("/api/papers/upload?skip_dedup=true", headers=headers, files={"files": (path.name, f, "application/pdf")})
+            up = c.post("/api/papers/upload?skip_dedup=true&auto_parse=false", headers=headers, files={"files": (path.name, f, "application/pdf")})
         pid = up.json()["items"][0]["paper"]["id"]
         parse_paper(pid, enable_vlm_formulas=False)
         pids.append(pid)

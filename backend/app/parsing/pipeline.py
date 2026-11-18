@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import gc
 import logging
+import threading
 from collections.abc import Callable
 from pathlib import Path
 
@@ -14,7 +15,7 @@ from app.core.config import settings
 from app.db.models import Block, Paper, Reference, Section
 from app.db.session import SessionLocal
 from app.dedup.service import compute_minhash
-from app.parsing.detector import inspect_pdf
+from app.parsing.detector import MUPDF_LOCK, inspect_pdf
 from app.parsing.layout import ParsedBlock, enrich_formulas_with_vlm, parse_vector_page
 from app.parsing.ocr import parse_scanned_pdf
 from app.parsing.structure import (
@@ -25,6 +26,17 @@ from app.parsing.structure import (
 )
 
 log = logging.getLogger(__name__)
+_PAPER_LOCKS_GUARD = threading.Lock()
+_PAPER_LOCKS: dict[int, threading.Lock] = {}
+
+
+def _get_paper_lock(paper_id: int) -> threading.Lock:
+    with _PAPER_LOCKS_GUARD:
+        lk = _PAPER_LOCKS.get(paper_id)
+        if lk is None:
+            lk = threading.Lock()
+            _PAPER_LOCKS[paper_id] = lk
+        return lk
 
 # 模块3 RAG 分块索引回调（阶段3注册，解耦解析与检索）
 _index_hook: Callable[[Session, int], None] | None = None
@@ -47,7 +59,19 @@ def parse_paper(
     progress_cb: Callable[[float, str], None] | None = None,
     enable_vlm_formulas: bool = True,
 ) -> dict:
-    """执行完整解析流程并持久化到数据库。"""
+    """执行完整解析流程并持久化到数据库（同文献串行锁 + MuPDF 线程安全保护）。"""
+    with _get_paper_lock(paper_id):
+        return _parse_paper_impl(
+            paper_id, progress_cb=progress_cb, enable_vlm_formulas=enable_vlm_formulas
+        )
+
+
+def _parse_paper_impl(
+    paper_id: int,
+    *,
+    progress_cb: Callable[[float, str], None] | None = None,
+    enable_vlm_formulas: bool = True,
+) -> dict:
 
     def _report(pct: float, msg: str) -> None:
         with SessionLocal() as s:
@@ -82,30 +106,31 @@ def parse_paper(
 
     all_blocks: list[ParsedBlock] = []
     if profile.has_text_layer:
-        doc = pymupdf.open(pdf_path)
-        try:
-            batch_size = 25 if profile.is_long_doc else 15
-            for start in range(0, profile.page_count, batch_size):
-                end = min(profile.page_count, start + batch_size)
-                for pi in range(start, end):
-                    blks = parse_vector_page(
-                        doc[pi],
-                        pi + 1,
-                        assets_dir=assets_dir,
-                        fast_mode=profile.is_long_doc,
-                    )
-                    all_blocks.extend(blks)
-                # 百页级长文档每批显式回收临时渲染对象，保证内存平稳
-                if profile.is_long_doc:
-                    gc.collect()
-                pct = 10.0 + (end / max(1, profile.page_count)) * 55.0
-                _report(pct, f"已解析 {end}/{profile.page_count} 页")
+        batch_size = 25 if profile.is_long_doc else 15
+        for start in range(0, profile.page_count, batch_size):
+            end = min(profile.page_count, start + batch_size)
+            with MUPDF_LOCK:
+                doc = pymupdf.open(pdf_path)
+                try:
+                    for pi in range(start, end):
+                        blks = parse_vector_page(
+                            doc[pi],
+                            pi + 1,
+                            assets_dir=assets_dir,
+                            fast_mode=profile.is_long_doc,
+                        )
+                        all_blocks.extend(blks)
+                finally:
+                    doc.close()
+            # 百页级长文档每批显式回收临时渲染对象，保证内存平稳
+            if profile.is_long_doc:
+                gc.collect()
+            pct = 10.0 + (end / max(1, profile.page_count)) * 55.0
+            _report(pct, f"已解析 {end}/{profile.page_count} 页")
 
-            if enable_vlm_formulas and not profile.is_long_doc:
-                _report(68.0, "正在使用视觉模型精准还原公式 LaTeX")
-                enrich_formulas_with_vlm(doc, all_blocks, max_formulas=12)
-        finally:
-            doc.close()
+        if enable_vlm_formulas and not profile.is_long_doc:
+            _report(68.0, "正在使用视觉模型精准还原公式 LaTeX")
+            enrich_formulas_with_vlm(pdf_path, all_blocks, max_formulas=12)
     else:
         def _ocr_prog(done: int, total: int) -> None:
             _report(10.0 + (done / max(1, total)) * 60.0, f"OCR 识别中 {done}/{total} 页")
@@ -113,7 +138,12 @@ def parse_paper(
         all_blocks = parse_scanned_pdf(pdf_path, assets_dir, progress_cb=_ocr_prog)
 
     _report(74.0, "正在抽取标题树、元数据与参考文献关联")
-    meta = extract_metadata(all_blocks, fallback_filename=Path(filename).stem)
+    meta = extract_metadata(
+        all_blocks,
+        fallback_filename=Path(filename).stem,
+        arxiv_id=profile.arxiv_id,
+        meta_year=profile.meta_year,
+    )
     sections = build_section_tree(all_blocks, profile.toc, is_long_doc=profile.is_long_doc)
     block_sec_idxs = assign_block_sections(all_blocks, sections)
     refs = parse_references_and_links(all_blocks, sections, block_sec_idxs)

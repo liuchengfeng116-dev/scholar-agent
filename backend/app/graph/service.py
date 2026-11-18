@@ -57,23 +57,38 @@ def build_citation_graph(
 
     for ref in ref_records:
         src_id = ref.paper_id
+        src_year = next((p.year for p in papers if p.id == src_id), None)
         dst_id: int | None = None
         if ref.arxiv_id and ref.arxiv_id in by_arxiv:
             dst_id = by_arxiv[ref.arxiv_id]
         elif ref.doi and ref.doi.lower() in by_doi:
             dst_id = by_doi[ref.doi.lower()]
         else:
-            rt = _norm_title(ref.title or ref.raw_text)
-            if len(rt) >= 12:
-                best_sim = 0
-                for cand_id, ct in norm_titles.items():
-                    if cand_id == src_id or len(ct) < 10:
-                        continue
-                    sim = fuzz.token_set_ratio(ct, rt)
-                    if sim > best_sim:
-                        best_sim = sim
-                        if sim >= 84:
-                            dst_id = cand_id
+            rt = _norm_title(ref.title)
+            raw_norm = _norm_title(ref.raw_text)
+            for cand in papers:
+                if cand.id == src_id:
+                    continue
+                # 1) 明确指向不同的 arXiv 编号或不可能的时间倒流（早期参考文献不可能引用多年后的新论文），直接跳过
+                if ref.arxiv_id and cand.arxiv_id and ref.arxiv_id != cand.arxiv_id:
+                    continue
+                if ref.year and cand.year and ref.year < cand.year - 1:
+                    continue
+                if src_year and cand.year and cand.year > src_year + 1:
+                    continue
+
+                ct = norm_titles.get(cand.id, "")
+                if len(ct) < 12:
+                    continue
+                # 2) 原文参考文献中包含完整目标论文标题（最可靠，兼容 authors/title 断句差异）
+                if len(ct) >= 18 and f" {ct} " in f" {raw_norm} ":
+                    dst_id = cand.id
+                    break
+                # 3) 对提取后的 ref.title 做词序相似度匹配，并要求长度接近，杜绝短标题如 "Layer normalization" 误命中长标题
+                if len(rt) >= 12 and min(len(ct), len(rt)) / max(len(ct), len(rt)) >= 0.6:
+                    if fuzz.token_sort_ratio(ct, rt) >= 84:
+                        dst_id = cand.id
+                        break
         if dst_id and dst_id != src_id and (src_id, dst_id) not in seen_edges:
             seen_edges.add((src_id, dst_id))
             G.add_edge(src_id, dst_id, kind="cites")

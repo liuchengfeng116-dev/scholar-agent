@@ -44,7 +44,7 @@ def test_t2_vector_parsing_and_t1_semantic_dedup(authed_client):
     from app.parsing.pipeline import parse_paper
 
     with v7_path.open("rb") as f:
-        up7 = c.post("/api/papers/upload", headers=headers, files={"files": ("1706.03762v7.pdf", f, "application/pdf")})
+        up7 = c.post("/api/papers/upload?auto_parse=false", headers=headers, files={"files": ("1706.03762v7.pdf", f, "application/pdf")})
     assert up7.status_code == 200
     p7 = up7.json()["items"][0]["paper"]
     p7_id = p7["id"]
@@ -101,7 +101,7 @@ def test_t4_long_book_541_pages(authed_client):
 
     with book_path.open("rb") as f:
         up = c.post(
-            "/api/papers/upload?skip_dedup=true",
+            "/api/papers/upload?skip_dedup=true&auto_parse=false",
             headers=headers,
             files={"files": (book_path.name, f, "application/pdf")},
         )

@@ -107,6 +107,7 @@ def ingest_pdf_bytes(
     *,
     source: str = "upload",
     skip_dedup: bool = False,
+    auto_parse: bool = True,
 ) -> tuple[dict, int | None]:
     """统一入库入口（本地上传与阶段5自动抓取共用）。"""
     sha = hashlib.sha256(raw).hexdigest()
@@ -158,7 +159,7 @@ def ingest_pdf_bytes(
             existing = db.get(Paper, dup.existing_paper_id)
             return _paper_dict(paper, dup, existing), None
 
-    task_id = submit_parse_task(paper.id, user_id)
+    task_id = submit_parse_task(paper.id, user_id) if auto_parse else None
     db.refresh(paper)
     return _paper_dict(paper), task_id
 
@@ -167,6 +168,7 @@ def ingest_pdf_bytes(
 async def upload_papers(
     files: list[UploadFile] = File(...),
     skip_dedup: bool = Query(default=False),
+    auto_parse: bool = Query(default=True),
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -179,7 +181,7 @@ async def upload_papers(
         if not raw:
             continue
         pdict, task_id = ingest_pdf_bytes(
-            db, user.id, f.filename or "paper.pdf", raw, skip_dedup=skip_dedup
+            db, user.id, f.filename or "paper.pdf", raw, skip_dedup=skip_dedup, auto_parse=auto_parse
         )
         results.append({"paper": pdict, "task_id": task_id})
     return {"items": results}

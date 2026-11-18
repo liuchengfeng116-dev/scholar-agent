@@ -266,31 +266,42 @@ def parse_vector_page(
             continue
 
         spans: list[dict] = []
-        line_texts: list[str] = []
+        line_items: list[tuple[str, float]] = []
         for ln in blk.get("lines", []):
             lt = "".join(sp.get("text", "") for sp in ln.get("spans", []))
             if lt.strip():
-                line_texts.append(lt)
+                lx0 = float((ln.get("bbox") or bbox)[0])
+                line_items.append((lt, lx0))
             spans.extend(ln.get("spans", []))
 
-        if not line_texts:
+        if not line_items:
             continue
 
-        # 若单个文本块内包含独立小节标题或逐条 [n] 参考文献，按行切分成独立逻辑块
-        split_groups: list[list[str]] = []
+        # 若单个文本块内包含独立小节标题或逐条 [n]/[ABC+16] 参考文献，按行切分成独立逻辑块
+        split_groups: list[tuple[list[str], float]] = []
         cur_grp: list[str] = []
-        for lt in line_texts:
+        cur_x0 = line_items[0][1]
+        for lt, lx0 in line_items:
             s_lt = lt.strip()
             is_boundary = bool(
-                re.match(r"^(?:\[\d+\]\s+|References\b|Bibliography\b|Appendix\b|\d+(?:\.\d+){0,2}\s+[A-Z])", s_lt, re.I)
+                re.match(
+                    r"^(?:\[\d+\]\s+|\[[A-Z][A-Za-z0-9\+\-\s]{1,12}\d{2}[a-z]?\]\s+|"
+                    r"R\s*eferences\b|Bibliography\b|Appendix\b|Acknowledgements?\b|"
+                    r"\d+(?:\.\d+){0,2}\.?\s+[A-Z])",
+                    s_lt,
+                    re.I,
+                )
             )
             if is_boundary and cur_grp:
-                split_groups.append(cur_grp)
+                split_groups.append((cur_grp, cur_x0))
                 cur_grp = [lt]
+                cur_x0 = lx0
             else:
+                if not cur_grp:
+                    cur_x0 = lx0
                 cur_grp.append(lt)
         if cur_grp:
-            split_groups.append(cur_grp)
+            split_groups.append((cur_grp, cur_x0))
 
         sizes = [sp.get("size", 10.0) for sp in spans if sp.get("text", "").strip()]
         avg_size = round(sum(sizes) / max(1, len(sizes)), 1)
@@ -298,7 +309,7 @@ def parse_vector_page(
 
         n_grp = max(1, len(split_groups))
         bh = max(1.0, bbox[3] - bbox[1])
-        for gi, grp in enumerate(split_groups):
+        for gi, (grp, grp_x0) in enumerate(split_groups):
             raw_txt = "\n".join(grp).strip()
             if not raw_txt:
                 continue
@@ -309,7 +320,7 @@ def parse_vector_page(
                 bbox
                 if n_grp == 1
                 else [
-                    bbox[0],
+                    round(grp_x0, 1),
                     round(bbox[1] + (gi / n_grp) * bh, 1),
                     bbox[2],
                     round(bbox[1] + ((gi + 1) / n_grp) * bh, 1),
@@ -331,55 +342,82 @@ def parse_vector_page(
                     "clean": clean,
                     "font_size": avg_size,
                     "bold": bold,
+                    "x0": round(grp_x0, 1),
                 }
             )
 
-    ordered = _sort_reading_order(text_items, pw)
-    result: list[ParsedBlock] = []
-    for item in ordered:
+    fig_blocks = _extract_figures(page, page_no, assets_dir, caption_candidates) if not fast_mode else []
+    # 将表格与图表随正文块一同送入双栏阅读顺序排序，绝不在末尾用 y 坐标二次重排破坏双栏阅读流
+    all_items: list[dict] = []
+    for item in text_items:
         btype = item["type"]
         content = item["raw"] if btype == "formula" else item["clean"]
-        result.append(
-            ParsedBlock(
-                type=btype,
-                page=page_no,
-                bbox=item["bbox"],
-                content=content,
-                latex=content if btype == "formula" else "",
-                font_size=item["font_size"],
-                is_bold=item["bold"],
-            )
+        all_items.append(
+            {
+                "bbox": item["bbox"],
+                "block": ParsedBlock(
+                    type=btype,
+                    page=page_no,
+                    bbox=item["bbox"],
+                    content=content,
+                    latex=content if btype == "formula" else "",
+                    font_size=item["font_size"],
+                    is_bold=item["bold"],
+                    extra={"x0": item["x0"], "page_w": round(pw, 1)},
+                ),
+            }
         )
+    for tb in table_blocks:
+        all_items.append({"bbox": tb.bbox, "block": tb})
+    for fb in fig_blocks:
+        all_items.append({"bbox": fb.bbox, "block": fb})
 
-    fig_blocks = _extract_figures(page, page_no, assets_dir, caption_candidates) if not fast_mode else []
-    combined = result + table_blocks + fig_blocks
-    combined.sort(key=lambda b: (b.bbox[1] if b.bbox else 0.0, b.bbox[0] if b.bbox else 0.0))
-    return combined
+    ordered = _sort_reading_order(all_items, pw)
+    return [it["block"] for it in ordered]
 
 
 def enrich_formulas_with_vlm(
-    doc: pymupdf.Document,
+    doc_or_path: pymupdf.Document | Path,
     blocks: list[ParsedBlock],
     *,
     max_formulas: int = 12,
 ) -> None:
-    """对论文中的关键独立公式块裁剪图像并调用 VLM 还原标准 LaTeX。"""
+    """对论文中的关键独立公式块裁剪图像并调用 VLM 还原标准 LaTeX（先加锁截图再释放锁走网络请求）。"""
+    from app.parsing.detector import MUPDF_LOCK
+
     targets = [b for b in blocks if b.type == "formula"][:max_formulas]
-    for blk in targets:
-        page = doc[blk.page - 1]
-        pad = 6.0
-        clip = pymupdf.Rect(
-            max(0.0, blk.bbox[0] - pad),
-            max(0.0, blk.bbox[1] - pad),
-            min(page.rect.width, blk.bbox[2] + pad),
-            min(page.rect.height, blk.bbox[3] + pad),
-        )
-        if clip.width < 20 or clip.height < 10:
-            continue
+    if not targets:
+        return
+
+    clips: list[tuple[ParsedBlock, bytes]] = []
+    with MUPDF_LOCK:
+        own_doc = not isinstance(doc_or_path, pymupdf.Document)
+        doc = pymupdf.open(doc_or_path) if own_doc else doc_or_path
         try:
-            pix = page.get_pixmap(dpi=180, clip=clip, alpha=False)
+            for blk in targets:
+                page = doc[blk.page - 1]
+                pad = 6.0
+                clip = pymupdf.Rect(
+                    max(0.0, blk.bbox[0] - pad),
+                    max(0.0, blk.bbox[1] - pad),
+                    min(page.rect.width, blk.bbox[2] + pad),
+                    min(page.rect.height, blk.bbox[3] + pad),
+                )
+                if clip.width < 20 or clip.height < 10:
+                    continue
+                try:
+                    pix = page.get_pixmap(dpi=180, clip=clip, alpha=False)
+                    clips.append((blk, pix.tobytes("png")))
+                except Exception:  # noqa: BLE001
+                    continue
+        finally:
+            if own_doc:
+                doc.close()
+
+    for blk, png_bytes in clips:
+        try:
             latex = llm.vision(
-                pix.tobytes("png"),
+                png_bytes,
                 "请将图片中的数学公式精准转为标准 LaTeX 代码，只输出公式本身（用 $$...$$ 包裹），不要额外解释。",
                 model=settings.ocr_model,
                 max_tokens=512,

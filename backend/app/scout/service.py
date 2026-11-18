@@ -306,6 +306,8 @@ def track_arxiv_with_sickle(
     cats = categories or [c.strip() for c in settings.arxiv_track_categories.split(",") if c.strip()]
     from_date = (datetime.now(UTC) - timedelta(days=days)).strftime("%Y-%m-%d")
     added = 0
+    # 预先加载库中已存在的 arxiv_id（SessionLocal autoflush=False，避免同批次多分类抓到重复 ID 时 flush 冲突）
+    seen_ids: set[str] = {row[0] for row in db.query(ArxivPaper.arxiv_id).all()}
 
     try:
         sickle = Sickle("https://export.arxiv.org/oai2", max_retries=2, timeout=25)
@@ -332,7 +334,8 @@ def track_arxiv_with_sickle(
                     authors = ", ".join(x for x in (meta.get("authors") or meta.get("author") or [])[:8] if x)
                     created = ((meta.get("created") or [""])[0] or "").strip()
                     gh = _extract_github_url(abstract + " " + comments)
-                    if not db.get(ArxivPaper, aid):
+                    if aid not in seen_ids:
+                        seen_ids.add(aid)
                         db.add(
                             ArxivPaper(
                                 arxiv_id=aid,
@@ -369,8 +372,9 @@ def track_arxiv_with_sickle(
                     if not m:
                         continue
                     aid = m.group(1)
-                    if db.get(ArxivPaper, aid):
+                    if aid in seen_ids:
                         continue
+                    seen_ids.add(aid)
                     comments = res.comment or ""
                     abstract = res.summary.replace("\n", " ")
                     gh = _extract_github_url(abstract + " " + comments)

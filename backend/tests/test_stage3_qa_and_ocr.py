@@ -52,7 +52,7 @@ def test_t3_scanned_pdf_ocr_slice(qa_client, tmp_path):
 
     with slice_path.open("rb") as f:
         up = c.post(
-            "/api/papers/upload?skip_dedup=true",
+            "/api/papers/upload?skip_dedup=true&auto_parse=false",
             headers=headers,
             files={"files": ("scanned_3p.pdf", f, "application/pdf")},
         )
@@ -79,7 +79,7 @@ def test_m2_single_paper_qa_and_multi_paper_compare(qa_client, tmp_path):
 
     with v7_path.open("rb") as f:
         up = c.post(
-            "/api/papers/upload?skip_dedup=true",
+            "/api/papers/upload?skip_dedup=true&auto_parse=false",
             headers=headers,
             files={"files": ("1706.03762v7.pdf", f, "application/pdf")},
         )
@@ -152,7 +152,7 @@ def test_m2_single_paper_qa_and_multi_paper_compare(qa_client, tmp_path):
 
     with bert_pdf.open("rb") as f:
         up_b = c.post(
-            "/api/papers/upload?skip_dedup=true",
+            "/api/papers/upload?skip_dedup=true&auto_parse=false",
             headers=headers,
             files={"files": ("bert_summary.pdf", f, "application/pdf")},
         )

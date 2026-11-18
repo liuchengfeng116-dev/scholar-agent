@@ -126,19 +126,22 @@ def parse_scanned_pdf(
     max_workers: int = 3,
 ) -> list[ParsedBlock]:
     """并发 OCR 解析图像扫描 PDF。"""
-    doc = pymupdf.open(pdf_path)
-    total_pages = len(doc)
+    from app.parsing.detector import MUPDF_LOCK
+
     page_jobs: list[tuple[int, bytes, float, float, str]] = []
-    try:
-        for i in range(total_pages):
-            page = doc[i]
-            pix = page.get_pixmap(dpi=160, alpha=False)
-            img_name = f"scan_p{i + 1}.png"
-            img_bytes = pix.tobytes("png")
-            (assets_dir / img_name).write_bytes(img_bytes)
-            page_jobs.append((i + 1, img_bytes, page.rect.width, page.rect.height, img_name))
-    finally:
-        doc.close()
+    with MUPDF_LOCK:
+        doc = pymupdf.open(pdf_path)
+        total_pages = len(doc)
+        try:
+            for i in range(total_pages):
+                page = doc[i]
+                pix = page.get_pixmap(dpi=160, alpha=False)
+                img_name = f"scan_p{i + 1}.png"
+                img_bytes = pix.tobytes("png")
+                (assets_dir / img_name).write_bytes(img_bytes)
+                page_jobs.append((i + 1, img_bytes, page.rect.width, page.rect.height, img_name))
+        finally:
+            doc.close()
 
     results_by_page: dict[int, list[ParsedBlock]] = {}
     done_count = 0

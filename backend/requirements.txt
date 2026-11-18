@@ -37,3 +37,5 @@ graphviz>=0.20
 # ---- 开发 ----
 pytest>=8.0
 ruff>=0.6
+markdown>=3.6        # 技术文档构建 scripts/build_tech_doc.py
+playwright>=1.45     # 界面截图与文档 PDF 渲染（复用本机 Edge）
