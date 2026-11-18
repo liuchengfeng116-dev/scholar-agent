@@ -213,6 +213,30 @@ def generate_survey(db: Session, graph: CitationGraph) -> str:
     return survey
 
 
+def normalize_future_work(raw: dict | None) -> dict:
+    """规范化 LLM 返回的 Future Work JSON，保证列表与 supporting_papers 字段类型一致。"""
+    data = raw if isinstance(raw, dict) else {}
+    resolved = data.get("resolved_ideas")
+    resolved_list = [x for x in resolved if isinstance(x, dict)] if isinstance(resolved, list) else []
+
+    open_dirs = data.get("open_directions")
+    normalized_open: list[dict] = []
+    if isinstance(open_dirs, list):
+        for item in open_dirs:
+            if not isinstance(item, dict):
+                continue
+            sp = item.get("supporting_papers")
+            if isinstance(sp, list):
+                sp_list = [str(s).strip() for s in sp if str(s).strip()]
+            elif isinstance(sp, str) and sp.strip():
+                sp_list = [sp.strip()]
+            else:
+                sp_list = []
+            normalized_open.append({**item, "supporting_papers": sp_list})
+
+    return {"resolved_ideas": resolved_list, "open_directions": normalized_open}
+
+
 def explore_future_work(db: Session, graph: CitationGraph) -> dict:
     """提取多篇论文 Future Work，结合时间线与后续进展自动排除已解决的旧 idea，提炼高价值方向。"""
     papers = db.query(Paper).filter(Paper.id.in_(graph.paper_ids)).order_by(Paper.year.asc()).all()
@@ -280,10 +304,11 @@ def explore_future_work(db: Session, graph: CitationGraph) -> dict:
         "}"
     )
     try:
-        res = llm.chat_json(prompt, model=settings.llm_model_strong, temperature=0.2)
+        raw_res = llm.chat_json(prompt, model=settings.llm_model_strong, temperature=0.2)
     except Exception:  # noqa: BLE001
-        res = {"resolved_ideas": [], "open_directions": []}
+        raw_res = {}
 
+    res = normalize_future_work(raw_res)
     graph.future_work = res
     db.commit()
     return res

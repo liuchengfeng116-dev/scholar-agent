@@ -7,7 +7,7 @@ Type=simple
 User=www-data
 WorkingDirectory=/opt/scholar-agent/backend
 EnvironmentFile=/opt/scholar-agent/.env
-ExecStart=/opt/scholar-agent/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 2
+ExecStart=/opt/scholar-agent/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 1
 Restart=always
 RestartSec=3
 

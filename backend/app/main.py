@@ -19,9 +19,10 @@ from app.agents import (  # noqa: F401
 )
 from app.agents.core import REGISTRY
 from app.api import auth, copilot, graph, papers, qa, reader, scout, tasks
-from app.core.config import settings
+from app.core.config import PROJECT_ROOT, settings
 from app.core.logging import setup_logging
 from app.core.security import hash_password
+from app.core.spa import mount_frontend_dist
 from app.db.models import User
 from app.db.session import Base, SessionLocal, engine
 from app.llm import client as llm
@@ -138,3 +139,6 @@ def health() -> dict:
         },
         "usage": llm.usage_stats,
     }
+
+
+mount_frontend_dist(app, PROJECT_ROOT / "frontend" / "dist")

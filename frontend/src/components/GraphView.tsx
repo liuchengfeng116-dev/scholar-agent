@@ -328,7 +328,12 @@ export const GraphView: React.FC<Props> = ({ papers }) => {
                                 <Text strong>{d.direction}</Text>
                                 <div style={{ fontSize: 12, color: '#475569' }}>{d.rationale}</div>
                                 <div>
-                                  {(d.supporting_papers || []).map((sp, i) => (
+                                  {(Array.isArray(d.supporting_papers)
+                                    ? d.supporting_papers
+                                    : d.supporting_papers
+                                      ? [String(d.supporting_papers)]
+                                      : []
+                                  ).map((sp, i) => (
                                     <Tag key={i} color="blue" style={{ marginTop: 4 }}>
                                       {sp}
                                     </Tag>

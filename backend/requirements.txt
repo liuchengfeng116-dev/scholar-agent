@@ -39,3 +39,5 @@ pytest>=8.0
 ruff>=0.6
 markdown>=3.6        # 技术文档构建 scripts/build_tech_doc.py
 playwright>=1.45     # 界面截图与文档 PDF 渲染（复用本机 Edge）
+edge-tts>=7.0        # 演示视频普通话配音合成 scripts/build_demo_video.py
+imageio-ffmpeg>=0.5  # 演示视频 1080p MP4 编码合成 scripts/build_demo_video.py

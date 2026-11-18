@@ -20,6 +20,7 @@ frontend/dist/
 data/
 !data/.gitkeep
 *.log
+*.mp4
 
 # ---- IDE / 系统 ----
 .vscode/

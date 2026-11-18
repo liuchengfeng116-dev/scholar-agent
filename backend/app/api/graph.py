@@ -26,7 +26,7 @@ def _graph_dict(g: CitationGraph) -> dict:
         "paper_ids": g.paper_ids or [],
         "data": g.data or {},
         "survey": g.survey or "",
-        "future_work": g.future_work or {},
+        "future_work": graph_svc.normalize_future_work(g.future_work),
         "created_at": g.created_at.isoformat() if g.created_at else None,
     }
 
